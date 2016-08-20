@@ -8,34 +8,36 @@ import * as encryptionService from '../services/encryptionService';
 import * as config from '../services/config';
 import {TokenProfile} from '../services/common';
 
-var InvalidUserError:Error     ={name:'INVALIDUSER', message:'Invalid user'};
-var InvalidPasswordError:Error ={name:'INVALIDPASSWORD', message:'Invalid password'};
-var InvalidUserGroupError:Error={name:'INVALIDUSERGROUP', message:'Invalid user group'};
+var InvalidUserPasswordError:Error     ={name:'INVALIDUSERPASSWORD', message:'Invalid user/password'};
 var MissingLoginParametersError={name:'MISSINGPARAMS', message:'Missing login parameters'}
 
 export function authenticate(request:express.Request, response:express.Response) {
     var username = request.body.username;
     var password = request.body.password;
 
+    //check for missing parameters
     if(!username || !password) return response.status(400).send(MissingLoginParametersError);
 
+    //get user record from database
     Database.GetUser(username, function (err, result:Database.UserRec[]) {
+
         if (err) return response.status(500).send(err);
 
         //check if user exists
-        if ((!result) || (result.length!=1)) return response.status(400).send(InvalidUserError);
+        if ((!result) || (result.length!=1)) return response.status(400).send(InvalidUserPasswordError);
 
-        var userprofile:TokenProfile = {userid: result[0].idUsers, account: result[0].idAccounts};
+        var userprofile:TokenProfile = {idusers: result[0].idUsers} as TokenProfile;
 
-        encryptionService.Compare(password, result[0].Password, function (err, valid) {
-            if (err) return response.status(500).send(err);
-
-            if (!valid) return response.status(400).send(InvalidPasswordError);
+        //check if password matches
+ //       encryptionService.Compare(password, result[0].Password, function (err, valid) {
+//            if (err) return response.status(500).send(err);
+            var valid:boolean= (password==result[0].password);
+            if (!valid) return response.status(400).send(InvalidUserPasswordError);
             else {
+                //compose token response
                 var secret: string = config.getConfigObject().tokensecret;
                 var Token = jwt.sign(userprofile, secret);
                 return response.status(200).json({Token: Token});
             }
             })
-        });
     }

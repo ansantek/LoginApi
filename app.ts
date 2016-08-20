@@ -13,7 +13,7 @@ var app = express();
 var port = 3002;  //listening port
 
 //define middleware sequence
-app.use(logger('dev'));
+app.use(logger('dev',{immediate:true}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended:true}));
 app.use(cookieParser());
